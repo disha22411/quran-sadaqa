@@ -3,35 +3,215 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>الصدقة الجارية</title>
-  <link rel="stylesheet" href="style.css">
+  <title>صدقة جارية</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary-green: #0d7a57;
+      --light-green-bg: #eaf6f2;
+      --card-border: #d4ebd2;
+      --text-main: #1f2937;
+    }
+    
+    * { box-sizing: border-box; }
+
+    body {
+      background-color: #f8faf9;
+      font-family: 'Tajawal', sans-serif;
+      margin: 0; padding: 0; color: var(--text-main);
+    }
+
+    /* الهيدر الأخضر الانسيابي */
+    .header-green {
+      background: linear-gradient(180deg, #075239 0%, #0d7a57 100%);
+      color: white; padding: 20px 20px 45px; text-align: center;
+      border-bottom-left-radius: 28px; border-bottom-right-radius: 28px;
+    }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .back-btn { color: white; text-decoration: none; font-size: 13px; background: rgba(255,255,255,0.18); padding: 6px 14px; border-radius: 20px; backdrop-filter: blur(4px); }
+    .badge-top { background: rgba(255,255,255,0.18); padding: 6px 16px; border-radius: 20px; font-size: 13px; border: 1px solid rgba(255,255,255,0.25); }
+    
+    .hero-title { font-size: 16px; margin-top: 10px; opacity: 0.9; }
+    .name-container { font-size: 28px; font-weight: 700; margin: 8px 0 12px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .sub-text { font-size: 13px; opacity: 0.88; max-width: 310px; margin: 0 auto; line-height: 1.6; }
+
+    .action-btns { display: flex; justify-content: center; gap: 10px; margin-top: 18px; }
+    .btn-action-head { background: white; color: var(--primary-green); border: none; padding: 8px 18px; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .btn-delete-head { background: rgba(255,255,255,0.15); color: #ffcdd2; border: 1px solid rgba(255,255,255,0.3); }
+
+    /* الشبكة الإحصائية الناعمة */
+    .stats-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      max-width: 420px; margin: -25px auto 25px; padding: 0 16px;
+    }
+    .stat-card {
+      background: white; border-radius: 20px; padding: 14px 16px; text-align: right;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center;
+      border: 1px solid #f0f0f0;
+    }
+    .stat-number { font-size: 22px; font-weight: 700; color: #1a1a1a; margin-bottom: 2px; }
+    .stat-label { font-size: 11px; color: #888; }
+    .stat-icon { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+
+    .section-title { text-align: center; margin-bottom: 20px; padding: 0 10px; }
+    .section-title h2 { font-size: 22px; font-weight: 700; margin: 0 0 6px; color: #111827; }
+    .section-title p { font-size: 12px; color: #6b7280; margin: 0; line-height: 1.5; }
+
+    /* بطاقة الجزء المنحنية والحية */
+    .parts-container { max-width: 420px; margin: 0 auto; padding: 0 16px 40px; }
+    
+    .part-card-item {
+      background: white;
+      border: 1.5px solid var(--card-border);
+      border-radius: 22px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 3px 10px rgba(13, 122, 87, 0.04);
+      transition: all 0.25s ease;
+      position: relative;
+    }
+
+    .part-card-item:active {
+      transform: scale(0.98);
+    }
+
+    .part-card-header {
+      display: flex; justify-content: space-between; align-items: center;
+    }
+
+    /* شارة "متاح" الناعمة */
+    .part-badge {
+      padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .badge-avail { background: #e8f5e9; color: #1b5e20; }
+    .badge-read { background: #e3f2fd; color: #0d47a1; }
+    .badge-done { background: #f5f5f5; color: #616161; }
+
+    /* مربع رقم الجزء الأنيق بحواف دائرية */
+    .part-number-box {
+      background: #eaf6f2;
+      border-radius: 12px;
+      padding: 6px 14px;
+      text-align: center;
+    }
+    .part-num-val { font-size: 16px; font-weight: 700; color: var(--primary-green); }
+    .part-num-total { font-size: 10px; color: #7f8c8d; }
+
+    /* آية/بداية الجزء بالخط العربي الجميل */
+    .part-start-word {
+      text-align: center; font-size: 26px; font-weight: 700; color: #2c3e50;
+      margin: 18px 0; font-family: 'Amiri', serif;
+    }
+
+    /* زر الحجز والانتقال التفاعلي */
+    .btn-part-action {
+      width: 100%; padding: 12px; border-radius: 14px; border: none;
+      font-weight: 700; font-size: 14px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background 0.2s;
+    }
+    .btn-green { background: transparent; color: var(--primary-green); border: 1.5px solid var(--primary-green); }
+    .btn-green:hover { background: var(--light-green-bg); }
+    .btn-blue { background: #1565c0; color: white; }
+    .btn-orange { background: #e65100; color: white; margin-top: 8px; }
+    .btn-gray { background: #f0f0f0; color: #aaa; border: none; }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);
+      display:none; align-items:center; justify-content:center; z-index:1000; padding:20px;
+    }
+    .modal-box { background:white; padding:24px; border-radius:22px; text-align:center; max-width:350px; width:100%; }
+    .modal-btns { display:flex; gap:10px; margin-top:20px; }
+    .modal-btns button { flex:1; padding:12px; border-radius:12px; border:none; font-weight:700; cursor:pointer; }
+  </style>
 </head>
 <body>
-<header class="page-head">
-  <a href="index.html" class="back">‹ الرئيسية</a>
-  <div class="hero-icon small">﷽</div>
-  <h1>صدقة جارية على روح</h1>
-  <h2 id="memorialName">...</h2>
-  <button id="shareBtn" class="share">🔗 مشاركة الصفحة</button>
-</header>
 
-<main class="container">
-  <section id="stats" class="stats"></section>
-  <div id="message" class="message hidden"></div>
-  <section class="parts-head">
-    <h2>أجزاء القرآن الكريم</h2>
-    <p>اختر جزءًا متاحًا واقرأه خلال 5 ساعات.</p>
-  </section>
-  <section id="parts" class="parts"></section>
-</main>
+<div class="header-green">
+  <div class="top-bar">
+    <a href="index.html" class="back-btn">‹ الرئيسية</a>
+    <span class="badge-top">♡ صدقة جارية</span>
+  </div>
+  <div class="hero-title">صدقة جارية على روح</div>
+  <div class="name-container">
+    <span id="memorialName">...</span>
+  </div>
+  <div class="sub-text">شارك معنا في قراءة القرآن الكريم، واجعل ثواب ما قرأت في ميزان حسناته بإذن الله</div>
+  
+  <div class="action-btns">
+    <button id="shareBtn" class="btn-action-head">🔗 مشاركة الصفحة</button>
+    <button id="deleteBtn" class="btn-action-head btn-delete-head">🗑️ حذف</button>
+  </div>
+</div>
 
-<div id="confirmModal" class="modal hidden">
+<div class="stats-grid">
+  <div class="stat-card">
+    <div>
+      <div id="statCompleted" class="stat-number">0</div>
+      <div class="stat-label">أجزاء تمت قراءتها</div>
+    </div>
+    <div class="stat-icon" style="background:#e8f5e9; color:#2e7d32;">✓</div>
+  </div>
+  <div class="stat-card">
+    <div>
+      <div id="statAvailable" class="stat-number">30</div>
+      <div class="stat-label">أجزاء متاحة</div>
+    </div>
+    <div class="stat-icon" style="background:#fff3e0; color:#e65100;">☉</div>
+  </div>
+  <div class="stat-card">
+    <div>
+      <div id="statReading" class="stat-number">0</div>
+      <div class="stat-label">إجمالي مرات القراءة</div>
+    </div>
+    <div class="stat-icon" style="background:#e3f2fd; color:#1565c0;">📖</div>
+  </div>
+  <div class="stat-card">
+    <div>
+      <div id="statKhatma" class="stat-number">0</div>
+      <div class="stat-label">عدد الختمات</div>
+    </div>
+    <div class="stat-icon" style="background:#fff8e1; color:#f57f17;">✨</div>
+  </div>
+</div>
+
+<div class="section-title">
+  <h2>أجزاء القرآن الكريم</h2>
+  <p>اضغط على جزء متاح لتبدأ القراءة، ثم اضغط "تمت القراءة" عند الانتهاء</p>
+</div>
+
+<div id="partsContainer" class="parts-container"></div>
+
+<!-- النافذة المنبثقة لإلغاء الحجز -->
+<div id="cancelModal" class="modal-overlay">
   <div class="modal-box">
-    <h2 id="confirmTitle">⚠️ تأكيد</h2>
-    <p id="confirmText"></p>
-    <div class="actions">
-      <button id="confirmYes" class="danger"></button>
-      <button id="confirmNo" class="secondary">لا، الرجوع</button>
+    <h3 style="margin:0 0 10px; color:#c62828;">⚠️ إلغاء حجز الجزء</h3>
+    <p style="font-size:14px; color:#555; line-height:1.6;">
+      هل أنت متأكد من إلغاء الحجز؟<br>
+      <b>نرجو عدم إلغاء حجز غيرك</b>، واحرص على حجز جزء آخر تقرأه بارك الله فيك.
+    </p>
+    <div class="modal-btns">
+      <button id="btnConfirmCancel" style="background:#c62828; color:white;">تأكيد الإلغاء</button>
+      <button id="btnKeepReservation" style="background:#e0e0e0; color:#333;">الرجوع</button>
+    </div>
+  </div>
+</div>
+
+<!-- النافذة المنبثقة للحذف -->
+<div id="deleteModal" class="modal-overlay">
+  <div class="modal-box">
+    <h3 style="margin:0 0 10px; color:#333;">🗑️ حذف الصفحة</h3>
+    <p style="font-size:13px; color:#666; line-height:1.5;">
+      تنويه: يرجى عدم حذف الصفحة إلا إذا كان هناك خطأ في كتابة الاسم أو تكرار بالصفحة.
+    </p>
+    <div class="modal-btns">
+      <button id="btnConfirmDelete" style="background:#c62828; color:white;">تأكيد الحذف</button>
+      <button id="btnCancelDelete" style="background:#e0e0e0; color:#333;">إلغاء</button>
     </div>
   </div>
 </div>
