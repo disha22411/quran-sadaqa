@@ -100,30 +100,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (part.status === 'completed') {
                 badgeHtml = `<span class="part-badge badge-done">✓ تمت القراءة</span>`;
-                // حتى لو مكتمل، لو حابب يسيب زرار القراءة ظاهراً لأي حد، ممكن نخليه متاح، أو نخليه زي ما هو. هنا هنضيف زرار القراءة للجميع أو للمحجوز. 
-                // بناءً على طلبك، هنخلي زرار "قراءة الجزء" ظاهر عشان يقدر يقرأ في أي وقت.
-                btnHtml = `
-                    <a href="https://quran.com/ar/juz/${i}?readingMode=arabic" target="_blank" class="btn-part-action btn-green" style="text-decoration:none; margin-bottom:8px; display:flex;">📖 قراءة الجزء (${i})</a>
-                    <button class="btn-part-action btn-gray" disabled>مكتمل</button>
-                `;
+                btnHtml = `<button class="btn-part-action btn-gray" disabled>مكتمل</button>`;
             } else if (part.status === 'reading') {
                 if (isMine) {
                     badgeHtml = `<span class="part-badge badge-read">🔵 تقرأه الآن</span>`;
                     btnHtml = `
-                        <a href="https://quran.com/ar/juz/${i}?readingMode=arabic" target="_blank" class="btn-part-action btn-green" style="text-decoration:none; margin-bottom:8px; display:flex;">📖 قراءة الجزء (${i})</a>
+                        <a href="https://quran.com/ar/juz/${i}?readingMode=arabic" target="_blank" class="btn-part-action btn-green" style="text-decoration:none; margin-bottom:8px; display:flex;">📖 قراءة الجزء</a>
                         <button class="btn-part-action btn-blue" onclick="completePart('${part.id}')">✓ إتمام القراءة</button>
                         <button class="btn-part-action btn-orange" onclick="openCancelModal('${part.id}')">إلغاء الحجز</button>
                     `;
                 } else {
                     badgeHtml = `<span class="part-badge badge-read">🟠 محجوز حالياً</span>`;
-                    btnHtml = `
-                        <a href="https://quran.com/ar/juz/${i}?readingMode=arabic" target="_blank" class="btn-part-action btn-green" style="text-decoration:none; margin-bottom:8px; display:flex;">📖 قراءة الجزء (${i})</a>
-                        <button class="btn-part-action btn-gray" disabled>غير متاح حالياً</button>
-                    `;
+                    btnHtml = `<button class="btn-part-action btn-gray" disabled>غير متاح حالياً</button>`;
                 }
-            } else {
-                // لو الجزء متاح، ونحب نضيف زرار قراءة برضه أو نكتفي بزر الحجز (زر الحجز بيحجز ويفتح لو حابب، بس الأفضل نضيف زرار القراءة جنبه أو مكانه)
-                btnHtml = `<button class="btn-part-action btn-green" onclick="reservePart(${i})">📖 اضغط للحجز والقراءة</button>`;
             }
 
             card.innerHTML = `
@@ -150,9 +139,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             reserved_by: userSessionId,
             reserved_at: new Date().toISOString()
         }]);
-        
-        // فتح صفحة القراءة مباشرة في تاب جديد عند الحجز
-        window.open(`https://quran.com/ar/juz/${partNum}?readingMode=arabic`, '_blank');
         fetchParts();
     };
 
