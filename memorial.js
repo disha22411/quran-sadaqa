@@ -2,20 +2,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const memorialId = urlParams.get('id');
 
-    // مطابقة الـ IDs تماماً مع ملف memorial.html
     const nameElement = document.getElementById('memorialName');
-    const partsContainer = document.getElementById('parts');
+    const partsContainer = document.getElementById('partsContainer');
     const shareBtn = document.getElementById('shareBtn');
+    
+    const statCompleted = document.getElementById('statCompleted');
+    const statAvailable = document.getElementById('statAvailable');
+    const statReading = document.getElementById('statReading');
+    const statKhatma = document.getElementById('statKhatma');
 
-    if (!memorialId) {
-        if (nameElement) nameElement.innerText = "خطأ: لم يتم تحديد المتوفى";
-        return;
-    }
+    const cancelModal = document.getElementById('cancelModal');
+    const btnConfirmCancel = document.getElementById('btnConfirmCancel');
+    const btnKeepReservation = document.getElementById('btnKeepReservation');
 
-    if (typeof supabase === 'undefined' || !window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
-        if (nameElement) nameElement.innerText = "خطأ في الاتصال بالخادم";
-        return;
-    }
+    const deleteModal = document.getElementById('deleteModal');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const btnConfirmDelete = document.getElementById('btnConfirmDelete');
+    const btnCancelDelete = document.getElementById('btnCancelDelete');
+
+    let targetPartToCancel = null;
+
+    const partStartWords = [
+        "آلم", "سَيَقُولُ", "تِلْكَ الرُّسُلُ", "لَنْ تَنَالُوا", "وَالْمُحْصَنَاتُ", 
+        "لَا يُحِبُّ اللَّهُ", "وَإِذَا سَمِعُوا", "وَلَوْ أَنَّنَا", "قَالَ الْمَلَأُ", "وَاعْلَمُوا", 
+        "يَعْتَذِرُونَ", "وَمَا مِنْ دَابَّةٍ", "وَمَا أُبَرِّئُ", "رُبَمَا", "سُبْحَانَ الَّذِي", 
+        "قَالَ أَلَمْ", "اقْتَرَبَ لِلنَّاسِ", "قَدْ أَفْلَحَ", "وَقَالَ الَّذِينَ", "أَمَّنْ خَلَقَ", 
+        "أُتْلُ مَا أُوحِيَ", "وَمَنْ يَقْنُتْ", "وَمَا لِيَ", "فَمَنْ أَظْلَمُ", "إِلَيْهِ يُرَدُّ", 
+        "حم", "قَالَ فَمَا خَطْبُكُمْ", "قَدْ سَمِعَ اللَّهُ", "تَبَارَكَ الَّذِي", "عَمَّ يَتَسَاءَلُونَ"
+    ];
+
+    if (!memorialId || typeof supabase === 'undefined') return;
 
     const db = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
 
@@ -25,124 +41,120 @@ document.addEventListener('DOMContentLoaded', async () => {
         localStorage.setItem('quran_user_session_id', userSessionId);
     }
 
-    // جلب بيانات المتوفى
     async function fetchMemorial() {
-        try {
-            const { data, error } = await db
-                .from('memorials')
-                .select('*')
-                .eq('id', memorialId)
-                .maybeSingle();
-
-            if (error || !data) {
-                if (nameElement) nameElement.innerText = "لم يتم العثور على الاسم";
-                return;
-            }
-
-            if (nameElement) nameElement.innerText = data.name || "متوفى";
+        const { data } = await db.from('memorials').select('*').eq('id', memorialId).maybeSingle();
+        if (data) {
+            nameElement.innerText = data.name;
             document.title = `صدقة جارية - ${data.name}`;
-
             fetchParts();
-        } catch (e) {
-            if (nameElement) nameElement.innerText = "حدث خطأ في التحميل";
         }
     }
 
-    // جلب وعرض الأجزاء الـ 30
     async function fetchParts() {
-        if (!partsContainer) return;
+        const { data: parts } = await db.from('parts').select('*').eq('memorial_id', memorialId);
         
-        try {
-            const { data: parts } = await db
-                .from('parts')
-                .select('*')
-                .eq('memorial_id', memorialId);
+        const partsMap = {};
+        let completedCount = 0;
+        let readingCount = 0;
 
-            const partsMap = {};
-            if (parts) {
-                parts.forEach(p => partsMap[p.part_number] = p);
-            }
+        if (parts) {
+            parts.forEach(p => {
+                partsMap[p.part_number] = p;
+                if (p.status === 'completed') completedCount++;
+                if (p.status === 'reading') readingCount++;
+            });
+        }
 
-            partsContainer.innerHTML = '';
+        statCompleted.innerText = completedCount;
+        statAvailable.innerText = 30 - completedCount;
+        statReading.innerText = parts ? parts.length : 0;
+        statKhatma.innerText = Math.floor(completedCount / 30);
+
+        partsContainer.innerHTML = '';
+
+        for (let i = 1; i <= 30; i++) {
+            const part = partsMap[i] || { part_number: i, status: 'available' };
+            const isMine = part.reserved_by === userSessionId;
             
-            // إنشاء الـ 30 جزء
-            for (let i = 1; i <= 30; i++) {
-                const part = partsMap[i] || { part_number: i, status: 'available' };
-                const card = document.createElement('div');
-                
-                card.style.cssText = "border:1px solid #ddd; padding:15px; margin:10px 0; border-radius:8px; text-align:center; background:#fff; box-shadow:0 2px 4px rgba(0,0,0,0.05);";
+            const card = document.createElement('div');
+            card.className = 'part-card-item';
 
-                let statusLabel = "متاح للقراءة";
-                let btnLabel = "احجز الجزء";
-                let btnColor = "#2e7d32";
-                let isDisabled = false;
+            let badgeHtml = `<span class="part-badge badge-avail">🟢 متاح</span>`;
+            let btnHtml = `<button class="btn-part-action btn-green" onclick="reservePart(${i})">📖 اضغط للحجز والقراءة</button>`;
 
-                if (part.status === 'completed') {
-                    statusLabel = "تمت القراءة ✓";
-                    btnLabel = "مكتمل";
-                    btnColor = "#757575";
-                    isDisabled = true;
-                } else if (part.status === 'reading') {
-                    if (part.reserved_by === userSessionId) {
-                        statusLabel = "تقوم بقراءته الآن";
-                        btnLabel = "إتمام القراءة";
-                        btnColor = "#1565c0";
-                    } else {
-                        statusLabel = "محجوز حالياً";
-                        btnLabel = "غير متاح";
-                        btnColor = "#e65100";
-                        isDisabled = true;
-                    }
-                }
-
-                card.innerHTML = `
-                    <h3 style="margin:0 0 10px 0;">الجزء ${i}</h3>
-                    <p style="color:#666; font-size:14px; margin-bottom:12px;">${statusLabel}</p>
-                    <button ${isDisabled ? 'disabled' : ''} id="btn-part-${i}" 
-                        style="background:${btnColor}; color:#fff; border:none; padding:10px 15px; border-radius:6px; cursor:pointer; width:100%; font-weight:bold;">
-                        ${btnLabel}
-                    </button>
-                `;
-
-                partsContainer.appendChild(card);
-
-                const btn = card.querySelector(`#btn-part-${i}`);
-                if (btn && !isDisabled) {
-                    btn.onclick = () => handlePartClick(part, i);
+            if (part.status === 'completed') {
+                badgeHtml = `<span class="part-badge badge-done">✓ تمت القراءة</span>`;
+                btnHtml = `<button class="btn-part-action btn-gray" disabled>مكتمل</button>`;
+            } else if (part.status === 'reading') {
+                if (isMine) {
+                    badgeHtml = `<span class="part-badge badge-read">🔵 تقرأه الآن</span>`;
+                    btnHtml = `
+                        <button class="btn-part-action btn-blue" onclick="completePart('${part.id}')">✓ إتمام القراءة</button>
+                        <button class="btn-part-action btn-orange" onclick="openCancelModal('${part.id}')">إلغاء الحجز</button>
+                    `;
+                } else {
+                    badgeHtml = `<span class="part-badge badge-read">🟠 محجوز حالياً</span>`;
+                    btnHtml = `<button class="btn-part-action btn-gray" disabled>غير متاح حالياً</button>`;
                 }
             }
-        } catch (e) {
-            partsContainer.innerHTML = "<p style='color:red;'>خطأ في تحميل الأجزاء</p>";
+
+            card.innerHTML = `
+                <div class="part-card-header">
+                    ${badgeHtml}
+                    <div class="part-number-box">
+                      <div class="part-num-val">${i}</div>
+                      <div class="part-num-total">30 / ${i}</div>
+                    </div>
+                </div>
+                <div class="part-start-word">${partStartWords[i - 1]}</div>
+                ${btnHtml}
+            `;
+
+            partsContainer.appendChild(card);
         }
     }
 
-    async function handlePartClick(part, partNum) {
-        if (!part.status || part.status === 'available') {
-            await db.from('parts').insert([{
-                memorial_id: memorialId,
-                part_number: partNum,
-                status: 'reading',
-                reserved_by: userSessionId,
-                reserved_at: new Date().toISOString()
-            }]);
-        } else if (part.status === 'reading' && part.reserved_by === userSessionId) {
-            await db.from('parts').update({ status: 'completed' }).eq('id', part.id);
-        }
+    window.reservePart = async (partNum) => {
+        await db.from('parts').insert([{
+            memorial_id: memorialId,
+            part_number: partNum,
+            status: 'reading',
+            reserved_by: userSessionId,
+            reserved_at: new Date().toISOString()
+        }]);
         fetchParts();
-    }
+    };
 
-    // تفعيل زر المشاركة
+    window.completePart = async (partId) => {
+        await db.from('parts').update({ status: 'completed' }).eq('id', partId);
+        fetchParts();
+    };
+
+    window.openCancelModal = (partId) => {
+        targetPartToCancel = partId;
+        cancelModal.style.display = 'flex';
+    };
+
+    btnKeepReservation.onclick = () => { cancelModal.style.display = 'none'; };
+    btnConfirmCancel.onclick = async () => {
+        if (targetPartToCancel) {
+            await db.from('parts').delete().eq('id', targetPartToCancel);
+            cancelModal.style.display = 'none';
+            fetchParts();
+        }
+    };
+
+    deleteBtn.onclick = () => { deleteModal.style.display = 'flex'; };
+    btnCancelDelete.onclick = () => { deleteModal.style.display = 'none'; };
+    btnConfirmDelete.onclick = async () => {
+        await db.from('memorials').delete().eq('id', memorialId);
+        window.location.href = 'index.html';
+    };
+
     if (shareBtn) {
         shareBtn.onclick = () => {
-            if (navigator.share) {
-                navigator.share({
-                    title: document.title,
-                    url: window.location.href
-                }).catch(() => {});
-            } else {
-                navigator.clipboard.writeText(window.location.href);
-                alert("تم نسخ رابط الصفحة بنجاح!");
-            }
+            if (navigator.share) navigator.share({ title: document.title, url: window.location.href });
+            else { navigator.clipboard.writeText(window.location.href); alert("تم نسخ الرابط!"); }
         };
     }
 
