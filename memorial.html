@@ -60,6 +60,9 @@
     .section-title h2 { font-size: 22px; font-weight: 700; margin: 0 0 6px; color: #111827; }
     .section-title p { font-size: 12px; color: #6b7280; margin: 0; line-height: 1.5; }
 
+    /* حاوية زر ختمة جديدة */
+    .reset-container { max-width: 420px; margin: 0 auto 20px; padding: 0 16px; }
+
     /* بطاقة الجزء المنحنية والحية */
     .parts-container { max-width: 420px; margin: 0 auto; padding: 0 16px 40px; }
     
@@ -82,7 +85,7 @@
       display: flex; justify-content: space-between; align-items: center;
     }
 
-    /* شارة "متاح" الناعمة */
+    /* الشارات */
     .part-badge {
       padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;
       display: inline-flex; align-items: center; gap: 5px;
@@ -91,7 +94,7 @@
     .badge-read { background: #e3f2fd; color: #0d47a1; }
     .badge-done { background: #f5f5f5; color: #616161; }
 
-    /* مربع رقم الجزء الأنيق بحواف دائرية */
+    /* مربع رقم الجزء */
     .part-number-box {
       background: #eaf6f2;
       border-radius: 12px;
@@ -101,13 +104,13 @@
     .part-num-val { font-size: 16px; font-weight: 700; color: var(--primary-green); }
     .part-num-total { font-size: 10px; color: #7f8c8d; }
 
-    /* آية/بداية الجزء بالخط العربي الجميل */
+    /* آية/بداية الجزء */
     .part-start-word {
       text-align: center; font-size: 26px; font-weight: 700; color: #2c3e50;
       margin: 18px 0; font-family: 'Amiri', serif;
     }
 
-    /* زر الحجز والانتقال التفاعلي */
+    /* أزرار التفاعل */
     .btn-part-action {
       width: 100%; padding: 12px; border-radius: 14px; border: none;
       font-weight: 700; font-size: 14px; cursor: pointer;
@@ -118,7 +121,7 @@
     .btn-green:hover { background: var(--light-green-bg); }
     .btn-blue { background: #1565c0; color: white; }
     .btn-orange { background: #e65100; color: white; margin-top: 8px; }
-    .btn-gray { background: #f0f0f0; color: #aaa; border: none; }
+    .btn-gray { background: #f0f0f0; color: #aaa; border: none; cursor: not-allowed; }
 
     /* Modals */
     .modal-overlay {
@@ -178,6 +181,11 @@
     </div>
     <div class="stat-icon" style="background:#fff8e1; color:#f57f17;">✨</div>
   </div>
+</div>
+
+<!-- زر بدء ختمة جديدة (يظهر مطفياً حتى تكتمل الـ 30 جزءاً) -->
+<div class="reset-container">
+  <button id="resetKhatmaBtn" class="btn-part-action btn-gray" disabled>✨ إتمام الختمة وبدء ختمة جديدة</button>
 </div>
 
 <div class="section-title">
