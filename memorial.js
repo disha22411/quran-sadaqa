@@ -48,6 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (data) {
             nameElement.innerText = data.name;
             document.title = `صدقة جارية - ${data.name}`;
+            statKhatma.innerText = data.khatmas_count || 0;
             fetchParts();
         }
     }
@@ -70,12 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         statCompleted.innerText = completedCount;
         statAvailable.innerText = 30 - completedCount;
         statReading.innerText = readingCount;
-        
-        // حساب عدد الختمات تلقائياً بكل سهولة
-        const khatmasCount = Math.floor(completedCount / 30);
-        statKhatma.innerText = khatmasCount;
 
-        // التحكم في تفعيل زر بدء ختمة جديدة (يفتح فقط عند اكتمال الـ 30 جزءاً)
         if (completedCount === 30) {
             resetKhatmaBtn.disabled = false;
             resetKhatmaBtn.className = "btn-part-action btn-blue";
@@ -164,12 +160,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // برمجة زر بدء ختمة جديدة لتصفير الأجزاء وإعادة فتحها
     if (resetKhatmaBtn) {
         resetKhatmaBtn.onclick = async () => {
-            if (confirm("✨ هل أنت متأكد من بدء ختمة جديدة؟ سيتم إعادة تعيين جميع الأجزاء لتكون متاحة للقراءة من جديد.")) {
+            if (confirm("✨ هل أنت متأكد من بدء ختمة جديدة؟ سيتم زيادة عداد الختمات وإعادة تعيين الأجزاء لتكون متاحة للقراءة.")) {
+                const { data: memData } = await db.from('memorials').select('khatmas_count').eq('id', memorialId).maybeSingle();
+                const currentCount = (memData && memData.khatmas_count !== null) ? Number(memData.khatmas_count) : 0;
+                const newCount = currentCount + 1;
+
+                await db.from('memorials').update({ khatmas_count: newCount }).eq('id', memorialId);
                 await db.from('parts').delete().eq('memorial_id', memorialId);
-                alert("بارك الله فيكم! تم بدء ختمة جديدة بنجاح.");
+
+                alert("بارك الله فيكم! تم بدء ختمة جديدة بنجاح وزيادة عداد الختمات.");
                 fetchMemorial();
             }
         };
