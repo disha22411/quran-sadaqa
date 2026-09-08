@@ -2,16 +2,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const memorialId = urlParams.get('id');
 
-    const nameElement = document.getElementById('memorial-name');
-    const partsContainer = document.getElementById('parts-container');
-    const shareBtn = document.getElementById('share-btn');
+    // مطابقة الـ IDs تماماً مع ملف memorial.html
+    const nameElement = document.getElementById('memorialName');
+    const partsContainer = document.getElementById('parts');
+    const shareBtn = document.getElementById('shareBtn');
 
     if (!memorialId) {
         if (nameElement) nameElement.innerText = "خطأ: لم يتم تحديد المتوفى";
         return;
     }
 
-    // التأكد من تحميل مكتبة Supabase
     if (typeof supabase === 'undefined' || !window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
         if (nameElement) nameElement.innerText = "خطأ في الاتصال بالخادم";
         return;
@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const db = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
 
-    // معرف المستخدم المحلي
     let userSessionId = localStorage.getItem('quran_user_session_id');
     if (!userSessionId) {
         userSessionId = 'user_' + Math.random().toString(36).substr(2, 9);
@@ -71,8 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const part = partsMap[i] || { part_number: i, status: 'available' };
                 const card = document.createElement('div');
                 
-                // تصميم سريع ومباشر للبطاقات
-                card.style.cssText = "border:1px solid #ddd; padding:15px; margin:10px; border-radius:8px; text-align:center; background:#fff;";
+                card.style.cssText = "border:1px solid #ddd; padding:15px; margin:10px 0; border-radius:8px; text-align:center; background:#fff; box-shadow:0 2px 4px rgba(0,0,0,0.05);";
 
                 let statusLabel = "متاح للقراءة";
                 let btnLabel = "احجز الجزء";
@@ -99,16 +97,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 card.innerHTML = `
                     <h3 style="margin:0 0 10px 0;">الجزء ${i}</h3>
-                    <p style="color:#666; font-size:14px;">${statusLabel}</p>
+                    <p style="color:#666; font-size:14px; margin-bottom:12px;">${statusLabel}</p>
                     <button ${isDisabled ? 'disabled' : ''} id="btn-part-${i}" 
-                        style="background:${btnColor}; color:#fff; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; width:100%;">
+                        style="background:${btnColor}; color:#fff; border:none; padding:10px 15px; border-radius:6px; cursor:pointer; width:100%; font-weight:bold;">
                         ${btnLabel}
                     </button>
                 `;
 
                 partsContainer.appendChild(card);
 
-                // إضافة حدث الضغط على الزر
                 const btn = card.querySelector(`#btn-part-${i}`);
                 if (btn && !isDisabled) {
                     btn.onclick = () => handlePartClick(part, i);
@@ -119,7 +116,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // التعامل مع حجز وإتمام الأجزاء
     async function handlePartClick(part, partNum) {
         if (!part.status || part.status === 'available') {
             await db.from('parts').insert([{
@@ -145,7 +141,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }).catch(() => {});
             } else {
                 navigator.clipboard.writeText(window.location.href);
-                alert("تم نسخ رابط الصفحة!");
+                alert("تم نسخ رابط الصفحة بنجاح!");
             }
         };
     }
