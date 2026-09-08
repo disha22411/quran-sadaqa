@@ -1,66 +1,193 @@
-const {createClient}=supabase;
-const db=createClient(window.SUPABASE_URL,window.SUPABASE_ANON_KEY);
-const id=new URLSearchParams(location.search).get("id");
-const $=x=>document.getElementById(x);
-let me=null,timer=null,confirmAction=null;
+document.addEventListener('DOMContentLoaded', async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const memorialId = urlParams.get('id');
 
-async function init(){
- if(!id){$("memorialName").textContent="غير موجود";return}
- if(window.SUPABASE_URL.includes("ضع_")){show("أكمل إعداد قاعدة البيانات أولًا.");return}
- let s=await db.auth.getSession(); if(!s.data.session) await db.auth.signInAnonymously();
- me=(await db.auth.getSession()).data.session.user.id;
- await load();
- db.channel("parts-"+id).on("postgres_changes",{event:"*",schema:"public",table:"quran_parts",filter:`memorial_id=eq.${id}`},load).subscribe();
-}
-async function load(){
- const {data,error}=await db.from("memorial_summary").select("*").eq("id",id).single();
- if(error){show("الصدقة الجارية غير موجودة.");return}
- $("memorialName").textContent=data.name;
- $("stats").innerHTML=`
- <div class="stat"><b>${data.parts_read}</b><span>أجزاء مقروءة</span></div>
- <div class="stat"><b>${data.total_readings}</b><span>إجمالي القراءات</span></div>
- <div class="stat"><b>${data.khatmas}</b><span>ختمات كاملة</span></div>`;
- const r=await db.from("quran_parts").select("*").eq("memorial_id",id).order("part_number");
- if(r.error){show(r.error.message);return}
- render(r.data);
-}
-function render(parts){
- $("parts").innerHTML=parts.map(p=>{
-  const mine=p.reserved_by===me && p.reserved_until;
-  const active=p.reserved_until && new Date(p.reserved_until)>new Date();
-  if(p.reserved_until && !active) return partCard(p,"expired");
-  if(mine) return `
-   <article class="part"><div class="part-top"><span class="part-name">الجزء ${p.part_number} — ${p.part_name}</span><span class="badge busy">أنت تقرأ</span></div>
-   <div class="part-count">تمت قراءته ${p.reading_count} مرة</div>
-   <div class="countdown" id="cd-${p.part_number}">متبقي على الحجز: --:--:--</div>
-   <div class="actions"><button class="primary" onclick="completePart('${p.id}')">تمت القراءة</button><button class="secondary" onclick="cancelPart('${p.id}')">إلغاء الحجز</button></div></article>`;
-  if(active) return `
-   <article class="part"><div class="part-top"><span class="part-name">الجزء ${p.part_number} — ${p.part_name}</span><span class="badge busy">قيد القراءة 🟡</span></div>
-   <div class="part-count">تمت قراءته ${p.reading_count} مرة</div></article>`;
-  return `
-   <article class="part"><div class="part-top"><span class="part-name">الجزء ${p.part_number} — ${p.part_name}</span><span class="badge">متاح 🟢</span></div>
-   <div class="part-count">تمت قراءته ${p.reading_count} مرة</div><button class="primary" onclick="reservePart('${p.id}')">حجز الجزء</button></article>`;
- }).join("");
- startCountdown(parts);
-}
-function partCard(p){return `<article class="part"><div class="part-top"><span class="part-name">الجزء ${p.part_number} — ${p.part_name}</span><span class="badge">متاح 🟢</span></div><div class="part-count">تمت قراءته ${p.reading_count} مرة</div><button class="primary" onclick="reservePart('${p.id}')">حجز الجزء</button></article>`}
-async function reservePart(partId){
- const {data,error}=await db.rpc("reserve_part",{p_part_id:partId});
- if(error){show(error.message);return}
- if(!data){show("الجزء لم يعد متاحًا، اختر جزءًا آخر.");return}
- show("تم حجز الجزء لك ❤️ أمامك 5 ساعات لإتمام القراءة.");
- load();
-}
-function ask(title,text,yes,fn){$("confirmTitle").textContent=title;$("confirmText").textContent=text;$("confirmYes").textContent=yes;confirmAction=fn;$("confirmModal").classList.remove("hidden")}
-$("confirmNo").onclick=()=>$("confirmModal").classList.add("hidden");
-$("confirmYes").onclick=async()=>{const fn=confirmAction;$("confirmModal").classList.add("hidden");await fn()};
-function cancelPart(partId){ask("⚠️ تنبيه","هل أنت متأكد أنك تريد إلغاء الحجز؟ من فضلك لا تقم بإلغاء حجز شخص آخر، لأن إلغاء الحجز سيجعل الجزء متاحًا لشخص آخر وقد يسبب لخبطة في القراءة.","نعم، إلغاء الحجز",async()=>{const {error}=await db.rpc("cancel_reservation",{p_part_id:partId});if(error)show(error.message);else{show("تم إلغاء الحجز وإتاحة الجزء.");load()}})}
-function completePart(partId){ask("📖 هل أتممت قراءة هذا الجزء بالفعل؟","إذا كنت قد أتممت القراءة، اضغط نعم، وإذا كنت لم تنتهِ بعد، اختر لا وسيظل الجزء محجوزًا لك.","نعم، تمت القراءة",async()=>{const {error}=await db.rpc("complete_part",{p_part_id:partId});if(error)show(error.message);else{show("جزاك الله خيرًا ❤️ تم تسجيل القراءة.");load()}})}
-function startCountdown(parts){
- clearInterval(timer); timer=setInterval(()=>{
-  parts.forEach(p=>{if(p.reserved_by!==me||!p.reserved_until)return;const el=$(`cd-${p.part_number}`);if(!el)return;let ms=new Date(p.reserved_until)-new Date();if(ms<=0){el.textContent="انتهى الحجز، يتم إتاحة الجزء...";load();return}const h=Math.floor(ms/36e5),m=Math.floor(ms%36e5/6e4),s=Math.floor(ms%6e4/1e3);el.textContent=`متبقي على الحجز: ${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`})
- },1000)
-}
-$("shareBtn").onclick=async()=>{try{await navigator.clipboard.writeText(location.href);show("تم نسخ رابط الصدقة الجارية ❤️")}catch{show("انسخ رابط الصفحة من شريط المتصفح وشاركه مع من تريد.")}}
-function show(t){$("message").textContent=t;$("message").classList.remove("hidden");setTimeout(()=>$("message").classList.add("hidden"),5000)}
-init();
+    const nameElement = document.getElementById('memorial-name');
+    const partsContainer = document.getElementById('parts-container');
+    const shareBtn = document.getElementById('share-btn');
+
+    const totalPartsEl = document.getElementById('stat-total');
+    const completedPartsEl = document.getElementById('stat-completed');
+    const readingPartsEl = document.getElementById('stat-reading');
+    const availablePartsEl = document.getElementById('stat-available');
+
+    if (!memorialId) {
+        if (nameElement) nameElement.innerText = "خطأ: لم يتم تحديد المتوفى";
+        return;
+    }
+
+    if (typeof supabase === 'undefined' || !window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
+        if (nameElement) nameElement.innerText = "خطأ في الاتصال بالخادم";
+        return;
+    }
+
+    const db = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+
+    let userSessionId = localStorage.getItem('quran_user_session_id');
+    if (!userSessionId) {
+        userSessionId = 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+        localStorage.setItem('quran_user_session_id', userSessionId);
+    }
+
+    async function loadMemorialData() {
+        try {
+            const { data: memorial, error: memError } = await db
+                .from('memorials')
+                .select('*')
+                .eq('id', memorialId)
+                .single();
+
+            if (memError || !memorial) {
+                if (nameElement) nameElement.innerText = "لم يتم العثور على المتوفى";
+                return;
+            }
+
+            if (nameElement) nameElement.innerText = memorial.name || memorial.title || "متوفى";
+            document.title = `صدقة جارية عن روح ${memorial.name || 'متوفى'}`;
+
+            if (shareBtn) {
+                shareBtn.onclick = () => {
+                    if (navigator.share) {
+                        navigator.share({
+                            title: `صدقة جارية - ${memorial.name}`,
+                            text: `شارك في ختم القرآن الكريم كصدقة جارية على روح ${memorial.name}`,
+                            url: window.location.href
+                        }).catch(() => {});
+                    } else {
+                        navigator.clipboard.writeText(window.location.href);
+                        alert("تم نسخ رابط الصفحة بنجاح!");
+                    }
+                };
+            }
+
+            await loadParts();
+        } catch (err) {
+            if (nameElement) nameElement.innerText = "حدث خطأ غير متوقع";
+        }
+    }
+
+    async function loadParts() {
+        if (!partsContainer) return;
+        partsContainer.innerHTML = '<p style="text-align:center; width:100%;">جاري تحميل أجزاء القرآن...</p>';
+
+        try {
+            let { data: parts } = await db
+                .from('parts')
+                .select('*')
+                .eq('memorial_id', memorialId)
+                .order('part_number', { ascending: true });
+
+            if (!parts) parts = [];
+            
+            renderParts(parts);
+            updateStats(parts);
+        } catch (err) {
+            partsContainer.innerHTML = '<p style="text-align:center; color:red;">حدث خطأ أثناء تحميل الأجزاء.</p>';
+        }
+    }
+
+    function renderParts(parts) {
+        partsContainer.innerHTML = '';
+        const partsMap = {};
+        parts.forEach(p => partsMap[p.part_number] = p);
+
+        for (let i = 1; i <= 30; i++) {
+            const part = partsMap[i] || { part_number: i, status: 'available' };
+            const card = document.createElement('div');
+            card.className = `part-card status-${part.status || 'available'}`;
+
+            let isExpired = false;
+            if (part.status === 'reading' && part.reserved_at) {
+                const reservedTime = new Date(part.reserved_at).getTime();
+                const now = new Date().getTime();
+                if (now - reservedTime > 5 * 60 * 60 * 1000) isExpired = true;
+            }
+
+            const currentStatus = isExpired ? 'available' : (part.status || 'available');
+            const isMyReservation = part.reserved_by === userSessionId;
+
+            let statusText = 'متاح';
+            let statusClass = 'badge-available';
+            let actionButtons = '';
+
+            if (currentStatus === 'completed') {
+                statusText = 'تمت القراءة بنجاح ✓';
+                statusClass = 'badge-completed';
+                actionButtons = `<button disabled class="btn-disabled">مكتمل</button>`;
+            } else if (currentStatus === 'reading' && !isExpired) {
+                if (isMyReservation) {
+                    statusText = 'أنت تقرأ هذا الجزء الآن';
+                    statusClass = 'badge-my-reading';
+                    actionButtons = `
+                        <button class="btn-complete" onclick="completePart('${part.id}', ${part.part_number})">إتمام القراءة</button>
+                        <button class="btn-cancel" onclick="cancelReservation('${part.id}', ${part.part_number})">إلغاء الحجز</button>
+                    `;
+                } else {
+                    statusText = 'قيد القراءة الآن';
+                    statusClass = 'badge-reading';
+                    actionButtons = `<button disabled class="btn-disabled">محجوز حالياً</button>`;
+                }
+            } else {
+                actionButtons = `<button class="btn-reserve" onclick="reservePart('${part.id}', ${part.part_number})">احجز الجزء</button>`;
+            }
+
+            card.innerHTML = `
+                <div class="part-header">
+                    <h3>الجزء ${part.part_number}</h3>
+                    <span class="status-badge ${statusClass}">${statusText}</span>
+                </div>
+                <div class="part-actions">${actionButtons}</div>
+            `;
+            partsContainer.appendChild(card);
+        }
+    }
+
+    function updateStats(parts) {
+        let completed = 0, reading = 0, available = 0;
+        parts.forEach(p => {
+            if (p.status === 'completed') completed++;
+            else if (p.status === 'reading') reading++;
+            else available++;
+        });
+        if (parts.length < 30) available += (30 - parts.length);
+
+        if (totalPartsEl) totalPartsEl.innerText = '30';
+        if (completedPartsEl) completedPartsEl.innerText = completed;
+        if (readingPartsEl) readingPartsEl.innerText = reading;
+        if (availablePartsEl) availablePartsEl.innerText = available;
+    }
+
+    window.reservePart = async function(partId, partNumber) {
+        if (!partId || partId === 'undefined' || partId === 'null') {
+            const { error } = await db.from('parts').insert([{
+                memorial_id: memorialId,
+                part_number: partNumber,
+                status: 'reading',
+                reserved_at: new Date().toISOString(),
+                reserved_by: userSessionId
+            }]);
+            if (!error) loadParts();
+            return;
+        }
+        const { error } = await db.from('parts').update({
+            status: 'reading',
+            reserved_at: new Date().toISOString(),
+            reserved_by: userSessionId
+        }).eq('id', partId);
+        if (!error) loadParts();
+    };
+
+    window.cancelReservation = async function(partId, partNumber) {
+        if (!confirm("إلغاء الحجز؟")) return;
+        const { error } = await db.from('parts').update({ status: 'available', reserved_at: null, reserved_by: null }).eq('id', partId);
+        if (!error) loadParts();
+    };
+
+    window.completePart = async function(partId, partNumber) {
+        if (!confirm("تأكيد إتمام القراءة؟")) return;
+        const { error } = await db.from('parts').update({ status: 'completed' }).eq('id', partId);
+        if (!error) loadParts();
+    };
+
+    loadMemorialData();
+});
