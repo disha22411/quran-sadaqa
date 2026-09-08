@@ -1,263 +1,223 @@
-document.addEventListener('DOMContentLoaded', async () => {
-    if (typeof supabase === 'undefined') return;
-    const db = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>صدقة جارية</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary-green: #0d7a57;
+      --light-green-bg: #eaf6f2;
+      --card-border: #d4ebd2;
+      --text-main: #1f2937;
+    }
+    
+    * { box-sizing: border-box; }
 
-    // جلب ID الشخص من الرابط (URL Query Param)
-    const urlParams = new URLSearchParams(window.location.search);
-    const memorialId = urlParams.get('id');
-
-    if (!memorialId) {
-        window.location.href = 'index.html';
-        return;
+    body {
+      background-color: #f8faf9;
+      font-family: 'Tajawal', sans-serif;
+      margin: 0; padding: 0; color: var(--text-main);
     }
 
-    // العناصر الرئيسية في الصفحة
-    const memorialNameElem = document.getElementById('memorialName');
-    const statCompletedElem = document.getElementById('statCompleted');
-    const statAvailableElem = document.getElementById('statAvailable');
-    const statReadingElem = document.getElementById('statReading');
-    const statKhatmaElem = document.getElementById('statKhatma');
-    const partsContainer = document.getElementById('partsContainer');
-    const shareBtn = document.getElementById('shareBtn');
-    const deleteBtn = document.getElementById('deleteBtn');
+    /* الهيدر الأخضر الانسيابي */
+    .header-green {
+      background: linear-gradient(180deg, #075239 0%, #0d7a57 100%);
+      color: white; padding: 20px 20px 45px; text-align: center;
+      border-bottom-left-radius: 28px; border-bottom-right-radius: 28px;
+    }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .back-btn { color: white; text-decoration: none; font-size: 13px; background: rgba(255,255,255,0.18); padding: 6px 14px; border-radius: 20px; backdrop-filter: blur(4px); }
+    .badge-top { background: rgba(255,255,255,0.18); padding: 6px 16px; border-radius: 20px; font-size: 13px; border: 1px solid rgba(255,255,255,0.25); }
+    
+    .hero-title { font-size: 16px; margin-top: 10px; opacity: 0.9; }
+    .name-container { font-size: 28px; font-weight: 700; margin: 8px 0 12px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .sub-text { font-size: 13px; opacity: 0.88; max-width: 310px; margin: 0 auto; line-height: 1.6; }
 
-    // Modals
-    const cancelModal = document.getElementById('cancelModal');
-    const btnConfirmCancel = document.getElementById('btnConfirmCancel');
-    const btnKeepReservation = document.getElementById('btnKeepReservation');
+    .action-btns { display: flex; justify-content: center; gap: 10px; margin-top: 18px; }
+    .btn-action-head { background: white; color: var(--primary-green); border: none; padding: 8px 18px; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .btn-delete-head { background: rgba(255,255,255,0.15); color: #ffcdd2; border: 1px solid rgba(255,255,255,0.3); }
 
-    const deleteModal = document.getElementById('deleteModal');
-    const btnConfirmDelete = document.getElementById('btnConfirmDelete');
-    const btnCancelDelete = document.getElementById('btnCancelDelete');
+    /* الشبكة الإحصائية الناعمة */
+    .stats-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      max-width: 420px; margin: -25px auto 25px; padding: 0 16px;
+    }
+    .stat-card {
+      background: white; border-radius: 20px; padding: 14px 16px; text-align: right;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center;
+      border: 1px solid #f0f0f0;
+    }
+    .stat-number { font-size: 22px; font-weight: 700; color: #1a1a1a; margin-bottom: 2px; }
+    .stat-label { font-size: 11px; color: #888; }
+    .stat-icon { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
 
-    let currentMemorial = null;
-    let partsData = [];
-    let selectedPartToCancel = null;
+    .section-title { text-align: center; margin-bottom: 20px; padding: 0 10px; }
+    .section-title h2 { font-size: 22px; font-weight: 700; margin: 0 0 6px; color: #111827; }
+    .section-title p { font-size: 12px; color: #6b7280; margin: 0; line-height: 1.5; }
 
-    // أسماء بداية الأجزاء
-    const juzStartWords = [
-        "آلم", "سَيَقُولُ", "تِلْكَ الرُّسُلُ", "لَنْ تَنَالُوا", "وَالْمُحْصَنَاتُ",
-        "لَا يُحِبُّ اللَّهُ", "وَإِذَا سَمِعُوا", "وَلَوْ أَنَّنَا", "قَالَ الْمَلَأُ", "وَاعْلَمُوا",
-        "يَعْتَذِرُونَ", "وَمَا مِنْ دَابَّةٍ", "وَمَا أُبَرِّئُ", "رُبَمَا", "سُبْحَانَ الَّذِي",
-        "قَالَ أَلَمْ", "اقْتَرَبَ لِلنَّاسِ", "قَدْ أَفْلَحَ", "وَقَالَ الَّذِينَ", "أَمَّنْ خَلَقَ",
-        "أُتْلُ مَا أُوحِيَ", "وَمَنْ يَقْنُتْ", "وَمَالِيَ", "فَمَنْ أَظْلَمُ", "إِلَيْهِ يُرَدُّ",
-        "حم", "قَالَ فَمَا خَطْبُكُمْ", "قَدْ سَمِعَ اللَّهُ", "تَبَارَكَ الَّذِي", "عَمَّ يَتَسَاءَلُونَ"
-    ];
-
-    // 1. زيادة عدد الزيارات وإحضار بيانات الصفحة
-    async function initPage() {
-        // زيادة عدد مشاهدات/زيارات الصفحة
-        await db.rpc('increment_views', { row_id: memorialId }).catch(() => {
-            // حل بديل في حال عدم تفعيل الـ RPC داتابيز
-            db.from('memorials').select('views').eq('id', memorialId).single().then(({ data }) => {
-                if (data) {
-                    db.from('memorials').update({ views: (data.views || 0) + 1 }).eq('id', memorialId);
-                }
-            });
-        });
-
-        loadMemorialData();
+    /* بطاقة الجزء المنحنية والحية */
+    .parts-container { max-width: 420px; margin: 0 auto; padding: 0 16px 40px; }
+    
+    .part-card-item {
+      background: white;
+      border: 1.5px solid var(--card-border);
+      border-radius: 22px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 3px 10px rgba(13, 122, 87, 0.04);
+      transition: all 0.25s ease;
+      position: relative;
     }
 
-    // جلب بيانات المتوفى والأجزاء
-    async function loadMemorialData() {
-        const { data, error } = await db.from('memorials').select('*').eq('id', memorialId).single();
-        if (error || !data) {
-            alert('لم يتم العثور على الصفحة');
-            window.location.href = 'index.html';
-            return;
-        }
-
-        currentMemorial = data;
-        memorialNameElem.innerText = currentMemorial.name;
-
-        // جلب حالة الأجزاء
-        loadParts();
+    .part-card-item:active {
+      transform: scale(0.98);
     }
 
-    async function loadParts() {
-        const { data, error } = await db
-            .from('parts')
-            .select('*')
-            .eq('memorial_id', memorialId)
-            .order('part_number', { ascending: true });
-
-        if (error) return;
-
-        // إذا لم تكن هناك أجزاء مسجلة، ننشئ الـ 30 جزءاً
-        if (!data || data.length === 0) {
-            await createInitialParts();
-            return;
-        }
-
-        partsData = data;
-        updateStats();
-        renderParts();
+    .part-card-header {
+      display: flex; justify-content: space-between; align-items: center;
     }
 
-    // إنشاء الـ 30 جزءاً أول مرة
-    async function createInitialParts() {
-        const initialArray = [];
-        for (let i = 1; i <= 30; i++) {
-            initialArray.push({
-                memorial_id: memorialId,
-                part_number: i,
-                status: 'available', // available, reading, done
-                reader_name: null
-            });
-        }
-        await db.from('parts').insert(initialArray);
-        loadParts();
+    /* شارة "متاح" الناعمة */
+    .part-badge {
+      padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .badge-avail { background: #e8f5e9; color: #1b5e20; }
+    .badge-read { background: #e3f2fd; color: #0d47a1; }
+    .badge-done { background: #f5f5f5; color: #616161; }
+
+    /* مربع رقم الجزء الأنيق بحواف دائرية */
+    .part-number-box {
+      background: #eaf6f2;
+      border-radius: 12px;
+      padding: 6px 14px;
+      text-align: center;
+    }
+    .part-num-val { font-size: 16px; font-weight: 700; color: var(--primary-green); }
+    .part-num-total { font-size: 10px; color: #7f8c8d; }
+
+    /* آية/بداية الجزء بالخط العربي الجميل */
+    .part-start-word {
+      text-align: center; font-size: 26px; font-weight: 700; color: #2c3e50;
+      margin: 18px 0; font-family: 'Amiri', serif;
     }
 
-    // 2. تحديث شبكة الإحصائيات مع فحص اكتمال الختمة
-    async function updateStats() {
-        const completed = partsData.filter(p => p.status === 'done').length;
-        const available = partsData.filter(p => p.status === 'available').length;
-        const totalReads = currentMemorial.total_reads || 0;
-        const khatmas = currentMemorial.khatmas_count || 0;
-
-        statCompletedElem.innerText = completed;
-        statAvailableElem.innerText = available;
-        statReadingElem.innerText = totalReads;
-        statKhatmaElem.innerText = khatmas;
-
-        // *** فحص اكتمال الختمة الـ 30 جزءاً لبدء ختمة جديدة ***
-        if (completed === 30) {
-            setTimeout(async () => {
-                alert(`✨ بفضل الله تم إتمام الختمة رقم (${khatmas + 1}) لـ (${currentMemorial.name})! جزاكم الله خيراً. تم فتح الأجزاء لبدء الختمة التالية.`);
-                await resetKhatmaForNewRound(khatmas + 1);
-            }, 500);
-        }
+    /* زر الحجز والانتقال التفاعلي */
+    .btn-part-action {
+      width: 100%; padding: 12px; border-radius: 14px; border: none;
+      font-weight: 700; font-size: 14px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background 0.2s;
     }
+    .btn-green { background: transparent; color: var(--primary-green); border: 1.5px solid var(--primary-green); }
+    .btn-green:hover { background: var(--light-green-bg); }
+    .btn-blue { background: #1565c0; color: white; }
+    .btn-orange { background: #e65100; color: white; margin-top: 8px; }
+    .btn-gray { background: #f0f0f0; color: #aaa; border: none; }
 
-    // إعادة تصفير الأجزاء لبدء ختمة جديدة
-    async function resetKhatmaForNewRound(newKhatmaCount) {
-        // تحديث عدد الختمات في الجدول الرئيسي
-        await db.from('memorials').update({
-            khatmas_count: newKhatmaCount
-        }).eq('id', memorialId);
-
-        // إعادة حالة جميع الأجزاء إلى متاح
-        await db.from('parts').update({
-            status: 'available',
-            reader_name: null
-        }).eq('memorial_id', memorialId);
-
-        loadMemorialData();
+    /* Modals */
+    .modal-overlay {
+      position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);
+      display:none; align-items:center; justify-content:center; z-index:1000; padding:20px;
     }
+    .modal-box { background:white; padding:24px; border-radius:22px; text-align:center; max-width:350px; width:100%; }
+    .modal-btns { display:flex; gap:10px; margin-top:20px; }
+    .modal-btns button { flex:1; padding:12px; border-radius:12px; border:none; font-weight:700; cursor:pointer; }
+  </style>
+</head>
+<body>
 
-    // 3. عرض بطاقات الأجزاء
-    function renderParts() {
-        partsContainer.innerHTML = '';
+<div class="header-green">
+  <div class="top-bar">
+    <a href="index.html" class="back-btn">‹ الرئيسية</a>
+    <span class="badge-top">♡ صدقة جارية</span>
+  </div>
+  <div class="hero-title">صدقة جارية على روح</div>
+  <div class="name-container">
+    <span id="memorialName">...</span>
+  </div>
+  <div class="sub-text">شارك معنا في قراءة القرآن الكريم، واجعل ثواب ما قرأت في ميزان حسناته بإذن الله</div>
+  
+  <div class="action-btns">
+    <button id="shareBtn" class="btn-action-head">🔗 مشاركة الصفحة</button>
+    <button id="deleteBtn" class="btn-action-head btn-delete-head">🗑️ حذف</button>
+  </div>
+</div>
 
-        partsData.forEach(part => {
-            const card = document.createElement('div');
-            card.className = 'part-card-item';
+<div class="stats-grid">
+  <div class="stat-card">
+    <div>
+      <div id="statCompleted" class="stat-number">0</div>
+      <div class="stat-label">أجزاء تمت قراءتها</div>
+    </div>
+    <div class="stat-icon" style="background:#e8f5e9; color:#2e7d32;">✓</div>
+  </div>
+  <div class="stat-card">
+    <div>
+      <div id="statAvailable" class="stat-number">30</div>
+      <div class="stat-label">أجزاء متاحة</div>
+    </div>
+    <div class="stat-icon" style="background:#fff3e0; color:#e65100;">☉</div>
+  </div>
+  <div class="stat-card">
+    <div>
+      <div id="statReading" class="stat-number">0</div>
+      <div class="stat-label">إجمالي مرات القراءة</div>
+    </div>
+    <div class="stat-icon" style="background:#e3f2fd; color:#1565c0;">📖</div>
+  </div>
+  <div class="stat-card">
+    <div>
+      <div id="statKhatma" class="stat-number">0</div>
+      <div class="stat-label">عدد الختمات</div>
+    </div>
+    <div class="stat-icon" style="background:#fff8e1; color:#f57f17;">✨</div>
+  </div>
+</div>
 
-            let badgeHTML = '';
-            let actionBtnHTML = '';
+<div class="section-title">
+  <h2>أجزاء القرآن الكريم</h2>
+  <p>اضغط على جزء متاح لتبدأ القراءة، ثم اضغط "تمت القراءة" عند الانتهاء</p>
+</div>
 
-            if (part.status === 'available') {
-                badgeHTML = `<span class="part-badge badge-avail">☉ متاح</span>`;
-                actionBtnHTML = `<button class="btn-part-action btn-green" onclick="handleReserve(${part.id})">📖 حجز الجزء للقراءة</button>`;
-            } else if (part.status === 'reading') {
-                badgeHTML = `<span class="part-badge badge-read">⏳ جاري القراءة</span>`;
-                actionBtnHTML = `
-                    <button class="btn-part-action btn-blue" onclick="handleComplete(${part.id})">✓ تمت القراءة</button>
-                    <button class="btn-part-action btn-orange" onclick="openCancelModal(${part.id})">إلغاء الحجز</button>
-                `;
-            } else if (part.status === 'done') {
-                badgeHTML = `<span class="part-badge badge-done">✓ تمت القراءة</span>`;
-                actionBtnHTML = `<button class="btn-part-action btn-gray" disabled>تمت قراءته في هذه الختمة</button>`;
-            }
+<div id="partsContainer" class="parts-container"></div>
 
-            card.innerHTML = `
-                <div class="part-card-header">
-                    ${badgeHTML}
-                    <div class="part-number-box">
-                        <span class="part-num-val">الجزء ${part.part_number}</span>
-                        <span class="part-num-total">/ 30</span>
-                    </div>
-                </div>
-                <div class="part-start-word">﴿ ${juzStartWords[part.part_number - 1]} ﴾</div>
-                ${actionBtnHTML}
-            `;
+<!-- النافذة المنبثقة لإلغاء الحجز -->
+<div id="cancelModal" class="modal-overlay">
+  <div class="modal-box">
+    <h3 style="margin:0 0 10px; color:#c62828;">⚠️ إلغاء حجز الجزء</h3>
+    <p style="font-size:14px; color:#555; line-height:1.6;">
+      هل أنت متأكد من إلغاء الحجز؟<br>
+      <b>نرجو عدم إلغاء حجز غيرك</b>، واحرص على حجز جزء آخر تقرأه بارك الله فيك.
+    </p>
+    <div class="modal-btns">
+      <button id="btnConfirmCancel" style="background:#c62828; color:white;">تأكيد الإلغاء</button>
+      <button id="btnKeepReservation" style="background:#e0e0e0; color:#333;">الرجوع</button>
+    </div>
+  </div>
+</div>
 
-            partsContainer.appendChild(card);
-        });
-    }
+<!-- النافذة المنبثقة للحذف -->
+<div id="deleteModal" class="modal-overlay">
+  <div class="modal-box">
+    <h3 style="margin:0 0 10px; color:#333;">🗑️ حذف الصفحة</h3>
+    <p style="font-size:13px; color:#666; line-height:1.5;">
+      تنويه: يرجى عدم حذف الصفحة إلا إذا كان هناك خطأ في كتابة الاسم أو تكرار بالصفحة.
+    </p>
+    <div class="modal-btns">
+      <button id="btnConfirmDelete" style="background:#c62828; color:white;">تأكيد الحذف</button>
+      <button id="btnCancelDelete" style="background:#e0e0e0; color:#333;">إلغاء</button>
+    </div>
+  </div>
+</div>
 
-    // 4. الأحداث والحركات (حجز، إتمام قراءة، إلغاء)
-    window.handleReserve = async (partId) => {
-        await db.from('parts').update({ status: 'reading' }).eq('id', partId);
-        
-        // توجيه القارئ إلى المصحف الإلكتروني للجزء المختار (اختياري)
-        loadParts();
-    };
-
-    window.handleComplete = async (partId) => {
-        // تحديث حالة الجزء إلى "تمت القراءة"
-        await db.from('parts').update({ status: 'done' }).eq('id', partId);
-
-        // زيادة إجمالي مرات القراءة للصفحة
-        const newTotalReads = (currentMemorial.total_reads || 0) + 1;
-        await db.from('memorials').update({ total_reads: newTotalReads }).eq('id', memorialId);
-        currentMemorial.total_reads = newTotalReads;
-
-        loadParts();
-    };
-
-    // إلغاء الحجز
-    window.openCancelModal = (partId) => {
-        selectedPartToCancel = partId;
-        cancelModal.style.display = 'flex';
-    };
-
-    btnConfirmCancel.addEventListener('click', async () => {
-        if (selectedPartToCancel) {
-            await db.from('parts').update({ status: 'available' }).eq('id', selectedPartToCancel);
-            cancelModal.style.display = 'none';
-            selectedPartToCancel = null;
-            loadParts();
-        }
-    });
-
-    btnKeepReservation.addEventListener('click', () => {
-        cancelModal.style.display = 'none';
-        selectedPartToCancel = null;
-    });
-
-    // مشاركة الصفحة
-    if (shareBtn) {
-        shareBtn.addEventListener('click', () => {
-            if (navigator.share) {
-                navigator.share({
-                    title: `صدقة جارية - ${currentMemorial?.name}`,
-                    text: `شارك معنا في قراءة القرآن الكريم واهدِ الثواب لـ ${currentMemorial?.name}:`,
-                    url: window.location.href
-                });
-            } else {
-                navigator.clipboard.writeText(window.location.href);
-                alert('تم نسخ رابط الصفحة بنجاح، يمكنك مشاركته الآن!');
-            }
-        });
-    }
-
-    // حذف الصفحة
-    if (deleteBtn) {
-        deleteBtn.addEventListener('click', () => deleteModal.style.display = 'flex');
-    }
-    if (btnCancelDelete) {
-        btnCancelDelete.addEventListener('click', () => deleteModal.style.display = 'none');
-    }
-    if (btnConfirmDelete) {
-        btnConfirmDelete.addEventListener('click', async () => {
-            await db.from('parts').delete().eq('memorial_id', memorialId);
-            await db.from('memorials').delete().eq('id', memorialId);
-            window.location.href = 'index.html';
-        });
-    }
-
-    initPage();
-});
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="memorial.js"></script>
+</body>
+</html>
