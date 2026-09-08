@@ -1,3 +1,2 @@
-// Supabase configuration
 window.SUPABASE_URL = "https://xvaliytxekkpybfywetg.supabase.co";
-window.SUPABASE_ANON_KEY = "sb_publishable_T9aEwlDF01SXK4mbo0ZTw_vVFV6gZp";
+window.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2YWxpeXR4ZWtrcHliZnl3ZXRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA5ODkyODgsImV4cCI6MjA1NjU2NTI4OH0.O_g5xR_CpxeH6e6NqO7xG-m2K3v6v3XJ8y9Z_A";
