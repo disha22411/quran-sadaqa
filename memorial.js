@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const statReading = document.getElementById('statReading');
     const statKhatma = document.getElementById('statKhatma');
 
+    const resetKhatmaBtn = document.getElementById('resetKhatmaBtn');
+
     const cancelModal = document.getElementById('cancelModal');
     const btnConfirmCancel = document.getElementById('btnConfirmCancel');
     const btnKeepReservation = document.getElementById('btnKeepReservation');
@@ -67,8 +69,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         statCompleted.innerText = completedCount;
         statAvailable.innerText = 30 - completedCount;
-        statReading.innerText = parts ? parts.length : 0;
-        statKhatma.innerText = Math.floor(completedCount / 30);
+        statReading.innerText = readingCount;
+        
+        // حساب عدد الختمات الكلي من قاعدة البيانات أو من المكتمل
+        const { data: memData } = await db.from('memorials').select('khatmas_count').eq('id', memorialId).maybeSingle();
+        const khatmasCount = memData?.khatmas_count || 0;
+        statKhatma.innerText = khatmasCount;
+
+        // التحكم في تفعيل زر بدء ختمة جديدة
+        if (completedCount === 30) {
+            resetKhatmaBtn.disabled = false;
+            resetKhatmaBtn.className = "btn-part-action btn-blue";
+            resetKhatmaBtn.style.background = "#0d7a57";
+            resetKhatmaBtn.style.color = "white";
+            resetKhatmaBtn.style.cursor = "pointer";
+        } else {
+            resetKhatmaBtn.disabled = true;
+            resetKhatmaBtn.className = "btn-part-action btn-gray";
+            resetKhatmaBtn.style.background = "#f0f0f0";
+            resetKhatmaBtn.style.color = "#aaa";
+            resetKhatmaBtn.style.cursor = "not-allowed";
+        }
 
         partsContainer.innerHTML = '';
 
@@ -144,9 +165,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    // برمجة زر إعادة الختمة وبدء ختمة جديدة
+    if (resetKhatmaBtn) {
+        resetKhatmaBtn.onclick = async () => {
+            if (confirm("✨ هل أنت متأكد من إتمام الختمة الحالية وبدء ختمة جديدة؟ سيتم إعادة جميع الأجزاء لتكون متاحة للقراءة وزيادة عداد الختمات.")) {
+                // حذف الأجزاء القديمة لتفريغ الختمة
+                await db.from('parts').delete().eq('memorial_id', memorialId);
+                
+                // جلب عداد الختمات الحالي وزيادته بواحدة
+                const { data: memData } = await db.from('memorials').select('khatmas_count').eq('id', memorialId).maybeSingle();
+                const newKhatmasCount = (memData?.khatmas_count || 0) + 1;
+                
+                await db.from('memorials').update({ khatmas_count: newKhatmasCount }).eq('id', memorialId);
+
+                alert("بارك الله فيكم! تم بدء ختمة جديدة بنجاح.");
+                fetchMemorial();
+            }
+        };
+    }
+
     deleteBtn.onclick = () => { deleteModal.style.display = 'flex'; };
     btnCancelDelete.onclick = () => { deleteModal.style.display = 'none'; };
     btnConfirmDelete.onclick = async () => {
+        await db.from('parts').delete().eq('memorial_id', memorialId);
         await db.from('memorials').delete().eq('id', memorialId);
         window.location.href = 'index.html';
     };
