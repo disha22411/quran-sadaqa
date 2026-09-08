@@ -71,12 +71,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         statAvailable.innerText = 30 - completedCount;
         statReading.innerText = readingCount;
         
-        // حساب عدد الختمات الكلي من قاعدة البيانات أو من المكتمل
-        const { data: memData } = await db.from('memorials').select('khatmas_count').eq('id', memorialId).maybeSingle();
-        const khatmasCount = memData?.khatmas_count || 0;
+        // حساب عدد الختمات تلقائياً بكل سهولة
+        const khatmasCount = Math.floor(completedCount / 30);
         statKhatma.innerText = khatmasCount;
 
-        // التحكم في تفعيل زر بدء ختمة جديدة
+        // التحكم في تفعيل زر بدء ختمة جديدة (يفتح فقط عند اكتمال الـ 30 جزءاً)
         if (completedCount === 30) {
             resetKhatmaBtn.disabled = false;
             resetKhatmaBtn.className = "btn-part-action btn-blue";
@@ -165,19 +164,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // برمجة زر إعادة الختمة وبدء ختمة جديدة
+    // برمجة زر بدء ختمة جديدة لتصفير الأجزاء وإعادة فتحها
     if (resetKhatmaBtn) {
         resetKhatmaBtn.onclick = async () => {
-            if (confirm("✨ هل أنت متأكد من إتمام الختمة الحالية وبدء ختمة جديدة؟ سيتم إعادة جميع الأجزاء لتكون متاحة للقراءة وزيادة عداد الختمات.")) {
-                // حذف الأجزاء القديمة لتفريغ الختمة
+            if (confirm("✨ هل أنت متأكد من بدء ختمة جديدة؟ سيتم إعادة تعيين جميع الأجزاء لتكون متاحة للقراءة من جديد.")) {
                 await db.from('parts').delete().eq('memorial_id', memorialId);
-                
-                // جلب عداد الختمات الحالي وزيادته بواحدة
-                const { data: memData } = await db.from('memorials').select('khatmas_count').eq('id', memorialId).maybeSingle();
-                const newKhatmasCount = (memData?.khatmas_count || 0) + 1;
-                
-                await db.from('memorials').update({ khatmas_count: newKhatmasCount }).eq('id', memorialId);
-
                 alert("بارك الله فيكم! تم بدء ختمة جديدة بنجاح.");
                 fetchMemorial();
             }
