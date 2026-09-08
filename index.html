@@ -3,44 +3,96 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>صدقات جارية على أرواح موتانا</title>
-  <link rel="stylesheet" href="style.css">
+  <title>صدقة جارية - القائمة الرئيسية</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary-green: #0d7a57;
+      --light-green-bg: #eaf6f2;
+      --card-border: #d4ebd2;
+    }
+    * { box-sizing: border-box; }
+    body {
+      background-color: #f8faf9;
+      font-family: 'Tajawal', sans-serif;
+      margin: 0; padding: 0;
+      color: #1f2937;
+    }
+    .main-header {
+      background: linear-gradient(180deg, #075239 0%, #0d7a57 100%);
+      color: white; padding: 30px 20px 40px; text-align: center;
+      border-bottom-left-radius: 28px; border-bottom-right-radius: 28px;
+    }
+    .main-title { font-size: 26px; font-weight: 700; margin: 0 0 8px; }
+    .main-subtitle { font-size: 13px; opacity: 0.88; max-width: 320px; margin: 0 auto 20px; line-height: 1.5; }
+    
+    .container { max-width: 420px; margin: 0 auto; padding: 0 16px 40px; }
+    
+    /* مربع البحث الذكي */
+    .search-box-container {
+      background: white; padding: 16px; border-radius: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.04); border: 1.5px solid var(--card-border);
+      margin-top: -25px; margin-bottom: 25px;
+    }
+    .search-input {
+      width: 100%; padding: 12px 16px; border-radius: 12px;
+      border: 1px solid #d1d5db; font-size: 15px; font-family: 'Tajawal', sans-serif;
+      outline: none; transition: border-color 0.2s;
+    }
+    .search-input:focus { border-color: var(--primary-green); }
+
+    /* نموذج إضافة متوفى جديد */
+    .add-form-card {
+      background: white; padding: 20px; border-radius: 20px;
+      border: 1.5px solid var(--card-border); margin-bottom: 25px;
+      box-shadow: 0 3px 10px rgba(13, 122, 87, 0.03);
+    }
+    .form-title { font-size: 16px; font-weight: 700; color: var(--primary-green); margin-bottom: 12px; }
+    .form-input {
+      width: 100%; padding: 12px; border-radius: 12px;
+      border: 1px solid #d1d5db; font-size: 14px; margin-bottom: 12px;
+      font-family: 'Tajawal', sans-serif;
+    }
+    .btn-submit {
+      width: 100%; padding: 12px; background: var(--primary-green);
+      color: white; border: none; border-radius: 12px; font-weight: 700;
+      font-size: 15px; cursor: pointer;
+    }
+
+    .list-title { font-size: 18px; font-weight: 700; margin-bottom: 12px; color: #111827; }
+  </style>
 </head>
 <body>
-<header class="hero">
-  <div class="hero-icon">﷽</div>
-  <h1>صدقات جارية على أرواح موتانا</h1>
-  <p>شارك في قراءة القرآن واجعل ثوابها صدقة جارية</p>
-</header>
 
-<main class="container">
-  <section class="toolbar">
-    <div>
-      <h2>الصدقات الجارية</h2>
-      <p id="memorialCount">جاري التحميل...</p>
-    </div>
-    <button id="addBtn" class="primary">＋ إضافة متوفى / صدقة جارية</button>
-  </section>
+<div class="main-header">
+  <div class="main-title">📖 صدقة جارية</div>
+  <div class="main-subtitle">قراءة القرآن الكريم وإهداء الثواب للأموات والأحياء</div>
+</div>
 
-  <div id="message" class="message hidden"></div>
-  <section id="memorials" class="cards"></section>
-</main>
+<div class="container">
+  <!-- مربع البحث -->
+  <div class="search-box-container">
+    <input type="text" id="searchInput" class="search-input" placeholder="🔍 ابحث عن اسم (مثال: محمد)...">
+  </div>
 
-<div id="addModal" class="modal hidden">
-  <div class="modal-box">
-    <button class="close" id="closeAdd">×</button>
-    <h2>إضافة صدقة جارية</h2>
-    <p>اكتب اسم المتوفى كما تريد أن يظهر للزوار.</p>
-    <form id="addForm">
-      <label>اسم المتوفى</label>
-      <input id="nameInput" required maxlength="120" placeholder="مثال: المرحوم محمد أحمد">
-      <button class="primary full" type="submit">إنشاء الصدقة الجارية</button>
+  <!-- إضافة متوفى جديد -->
+  <div class="add-form-card">
+    <div class="form-title">إضافة صفحة صدقة جارية جديدة</div>
+    <form id="createForm">
+      <input type="text" id="nameInput" class="form-input" placeholder="اكتب اسم المرحوم / المتوفى هنا" required>
+      <button type="submit" class="btn-submit">+ إنشاء صفحة جديدة</button>
     </form>
   </div>
+
+  <div class="list-title">قائمة الصفحات الحالية</div>
+  <div id="memorialsList"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
-<script src="app.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
