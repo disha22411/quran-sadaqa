@@ -29,6 +29,14 @@
     .main-title { font-size: 26px; font-weight: 700; margin: 0 0 8px; }
     .main-subtitle { font-size: 14px; opacity: 0.95; max-width: 330px; margin: 0 auto; line-height: 1.6; }
     
+    /* شارة عداد الزوار العام */
+    .global-counter {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255, 255, 255, 0.15); padding: 6px 14px;
+      border-radius: 20px; font-size: 13px; margin-top: 12px;
+      backdrop-filter: blur(5px);
+    }
+
     .container { max-width: 420px; margin: 0 auto; padding: 0 16px 40px; }
     
     /* مربع البحث */
@@ -63,6 +71,18 @@
     }
 
     .list-title { font-size: 18px; font-weight: 700; margin-bottom: 12px; color: #111827; }
+
+    /* تنسيق كروت الأشخاص وعداد زوار كل شخص */
+    .memorial-card {
+      background: white; border-radius: 16px; padding: 16px;
+      margin-bottom: 12px; border: 1px solid var(--card-border);
+      display: flex; justify-content: space-between; align-items: center;
+      text-decoration: none; color: inherit; transition: transform 0.2s;
+    }
+    .memorial-card:active { transform: scale(0.98); }
+    .memorial-info { display: flex; flex-direction: column; gap: 4px; }
+    .memorial-name { font-size: 16px; font-weight: 700; color: #1f2937; }
+    .memorial-views { font-size: 12px; color: #0d7a57; background: #eaf6f2; padding: 3px 8px; border-radius: 10px; width: fit-content; }
   </style>
 </head>
 <body>
@@ -70,6 +90,11 @@
 <div class="main-header">
   <div class="main-title">📖 صدقة جارية</div>
   <div class="main-subtitle">"الدَّالُّ عَلَى الْخَيْرِ كَفَاعِلِهِ" — انشر الموقع مع أحبابك وشاركه لتضاعف أجرك وأجرهم بإذن الله 🤍</div>
+  
+  <!-- عداد زوار الموقع العام -->
+  <div class="global-counter">
+    👁️ إجمالي زوار الموقع: <strong id="totalSiteViews">...</strong>
+  </div>
 </div>
 
 <div class="container">
@@ -87,7 +112,7 @@
     </form>
   </div>
 
-  <div class="list-title">قائمة الصفحات الحالية</div>
+  <div class="list-title">قائمة الصفحات الحالية (الأقل زيارة أولاً)</div>
   <div id="memorialsList"></div>
 </div>
 
