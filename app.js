@@ -1,37 +1,75 @@
-const {createClient}=supabase;
-const db=createClient(window.SUPABASE_URL,window.SUPABASE_ANON_KEY);
-const $=id=>document.getElementById(id);
+document.addEventListener('DOMContentLoaded', async () => {
+    if (typeof supabase === 'undefined') return;
+    const db = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
 
-async function init(){
-  if(window.SUPABASE_URL.includes("ضع_")){show("أكمل إعداد قاعدة البيانات أولًا.");return}
-  const {data,error}=await db.auth.getSession();
-  if(!data.session) await db.auth.signInAnonymously();
-  loadMemorials();
-}
-function show(t){$("message").textContent=t;$("message").classList.remove("hidden")}
-async function loadMemorials(){
-  const {data,error}=await db.from("memorial_summary").select("*").order("created_at",{ascending:false});
-  if(error){show(error.message);return}
-  $("memorialCount").textContent=`عدد الصدقات الجارية: ${data.length}`;
-  $("memorials").innerHTML=data.map(x=>`
-    <article class="card">
-      <h3>🕊️ ${esc(x.name)}</h3>
-      <div class="card-stats">
-        <div class="stat"><b>${x.parts_read}</b><span>أجزاء مقروءة</span></div>
-        <div class="stat"><b>${x.total_readings}</b><span>إجمالي القراءات</span></div>
-        <div class="stat"><b>${x.khatmas}</b><span>ختمات كاملة</span></div>
-      </div>
-      <a class="primary open" href="memorial.html?id=${encodeURIComponent(x.id)}">قراءة القرآن على روحه</a>
-    </article>`).join("") || `<div class="card">لا توجد صدقات جارية حتى الآن.</div>`;
-}
-$("addBtn").onclick=()=>$("addModal").classList.remove("hidden");
-$("closeAdd").onclick=()=>$("addModal").classList.add("hidden");
-$("addForm").onsubmit=async e=>{
- e.preventDefault(); const name=$("nameInput").value.trim(); if(!name)return;
- const {data,error}=await db.rpc("create_memorial",{p_name:name});
- if(error){show(error.message);return}
- $("addModal").classList.add("hidden"); $("nameInput").value="";
- location.href=`memorial.html?id=${encodeURIComponent(data)}`;
-};
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
-init();
+    const searchInput = document.getElementById('searchInput');
+    const listContainer = document.getElementById('memorialsList');
+    const createForm = document.getElementById('createForm');
+    const nameInput = document.getElementById('nameInput');
+
+    let allMemorials = [];
+
+    // 1. جلب وجلب البيانات الحالية من داتابيز Supabase
+    async function loadAllMemorials() {
+        const { data, error } = await db.from('memorials').select('*').order('created_at', { ascending: false });
+        if (!error && data) {
+            allMemorials = data;
+            renderList(allMemorials);
+        }
+    }
+
+    // 2. عرض القائمة بتنسيق كروت أنيقة
+    function renderList(items) {
+        if (!listContainer) return;
+        listContainer.innerHTML = '';
+
+        if (items.length === 0) {
+            listContainer.innerHTML = `<p style="text-align:center; color:#888; font-size:14px; margin-top:15px;">لا توجد صفحات حالياً</p>`;
+            return;
+        }
+
+        items.forEach(item => {
+            const card = document.createElement('a');
+            card.href = `memorial.html?id=${item.id}`;
+            card.style.cssText = "display:block; background:white; padding:16px; margin-bottom:12px; border-radius:16px; text-decoration:none; color:#1f2937; box-shadow:0 3px 8px rgba(0,0,0,0.03); border:1.5px solid #d4ebd2; font-weight:700; font-size:15px;";
+            card.innerText = `صدقة جارية - ${item.name}`;
+            listContainer.appendChild(card);
+        });
+    }
+
+    // 3. فلترة الأسماء فورياً عند الكتابة في شريط البحث
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim().toLowerCase();
+            const filtered = allMemorials.filter(m => m.name.toLowerCase().includes(query));
+            renderList(filtered);
+        });
+    }
+
+    // 4. تنفيذ إضافة اسم جديد
+    if (createForm) {
+        createForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = nameInput.value.trim();
+            if (!name) return;
+
+            const submitBtn = createForm.querySelector('button[type="submit"]');
+            submitBtn.innerText = "جاري الإضافة...";
+            submitBtn.disabled = true;
+
+            const { data, error } = await db.from('memorials').insert([{ name: name }]).select();
+
+            if (!error && data && data.length > 0) {
+                nameInput.value = '';
+                // التوجه المباشر للصفحة الجديدة التي تم إنشاؤها
+                window.location.href = `memorial.html?id=${data[0].id}`;
+            } else {
+                alert("حدث خطأ أثناء الإضافة، يرجى المحاولة مرة أخرى.");
+                submitBtn.innerText = "+ إنشاء صفحة جديدة";
+                submitBtn.disabled = false;
+            }
+        });
+    }
+
+    loadAllMemorials();
+});
