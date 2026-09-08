@@ -41,25 +41,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     ];
 
     async function initPage() {
-        await db.rpc('increment_views', { row_id: memorialId }).catch(() => {
+        // محاولة تحديث المشاهدات بدون تعطيل جلب البيانات لو حدث خطأ
+        db.rpc('increment_views', { row_id: memorialId }).catch(() => {
             db.from('memorials').select('views').eq('id', memorialId).single().then(({ data }) => {
                 if (data) {
                     db.from('memorials').update({ views: (data.views || 0) + 1 }).eq('id', memorialId);
                 }
             });
         });
+
         loadMemorialData();
     }
 
     async function loadMemorialData() {
-        const { data, error } = await db.from('memorials').select('*').eq('id', memorialId).single();
+        const { data, error } = await db.from('memorials').select('*').eq('id', memorialId).maybeSingle();
+        
         if (error || !data) {
-            alert('لم يتم العثور على الصفحة');
-            window.location.href = 'index.html';
+            memorialNameElem.innerText = "عذراً، لم يتم العثور على الصفحة";
+            console.error("Supabase Error:", error);
             return;
         }
+
         currentMemorial = data;
-        memorialNameElem.innerText = currentMemorial.name;
+        memorialNameElem.innerText = currentMemorial.name || "بدون اسم";
         loadParts();
     }
 
@@ -70,7 +74,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             .eq('memorial_id', memorialId)
             .order('part_number', { ascending: true });
 
-        if (error) return;
+        if (error) {
+            console.error("Parts Error:", error);
+            return;
+        }
 
         if (!data || data.length === 0) {
             await createInitialParts();
